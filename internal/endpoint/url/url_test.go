@@ -151,6 +151,61 @@ func TestUpdateRejectsInvalidID(t *testing.T) {
 	requireHTTPErrorCode(t, err, http.StatusBadRequest)
 }
 
+func TestGetReturnsOwnedURL(t *testing.T) {
+	e, engine, owner, _, _ := setupURLTest(t)
+	entity := insertEntity(t, engine, owner, "first")
+	stored := insertURL(t, engine, owner, entity, "details")
+
+	recorder, err := getURLRequest(e, owner, fmt.Sprint(stored.Id))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", recorder.Code, http.StatusOK)
+	}
+
+	var response responseschemas.Url
+	if err := json.Unmarshal(recorder.Body.Bytes(), &response); err != nil {
+		t.Fatal(err)
+	}
+	if response.Id != stored.Id || response.FullUrl != stored.FullUrl || response.ShortCode != stored.ShortCode {
+		t.Fatalf("unexpected URL response: %+v", response)
+	}
+	if response.ShortUrl != "http://example.com/details" {
+		t.Fatalf("ShortUrl = %q, want %q", response.ShortUrl, "http://example.com/details")
+	}
+}
+
+func TestGetEnforcesOwnershipAndExistence(t *testing.T) {
+	e, engine, owner, other, admin := setupURLTest(t)
+	entity := insertEntity(t, engine, owner, "first")
+	stored := insertURL(t, engine, owner, entity, "protected-get")
+
+	_, err := getURLRequest(e, other, fmt.Sprint(stored.Id))
+	requireHTTPErrorCode(t, err, http.StatusNotFound)
+
+	recorder, err := getURLRequest(e, admin, fmt.Sprint(stored.Id))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("admin get status = %d, want %d", recorder.Code, http.StatusOK)
+	}
+
+	_, err = getURLRequest(e, owner, fmt.Sprint(stored.Id+1))
+	requireHTTPErrorCode(t, err, http.StatusNotFound)
+
+	deleted := insertURL(t, engine, owner, entity, "deleted-get")
+	if _, err := engine.ID(deleted.Id).Delete(new(databasemodels.Url)); err != nil {
+		t.Fatal(err)
+	}
+	_, err = getURLRequest(e, owner, fmt.Sprint(deleted.Id))
+	requireHTTPErrorCode(t, err, http.StatusNotFound)
+
+	_, err = getURLRequest(e, owner, "invalid")
+	requireHTTPErrorCode(t, err, http.StatusBadRequest)
+}
+
 func setupURLTest(t *testing.T) (*echo.Echo, *xorm.Engine, databasemodels.User, databasemodels.User, databasemodels.User) {
 	t.Helper()
 
@@ -207,6 +262,17 @@ func updateURLRequest(e *echo.Echo, user databasemodels.User, id, body string) (
 	context.SetParamValues(id)
 	context.Set(constrains.UserInfoContextVar, user)
 	return recorder, Update(context)
+}
+
+func getURLRequest(e *echo.Echo, user databasemodels.User, id string) (*httptest.ResponseRecorder, error) {
+	request := httptest.NewRequest(http.MethodGet, "http://example.com/api/url/"+id+"/", nil)
+	recorder := httptest.NewRecorder()
+	context := e.NewContext(request, recorder)
+	context.SetPath("/api/url/:" + constrains.IdParamName + "/")
+	context.SetParamNames(constrains.IdParamName)
+	context.SetParamValues(id)
+	context.Set(constrains.UserInfoContextVar, user)
+	return recorder, Get(context)
 }
 
 func insertEntity(t *testing.T, engine *xorm.Engine, creator databasemodels.User, name string) databasemodels.Entity {
