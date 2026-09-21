@@ -227,6 +227,7 @@ func start(_ *cobra.Command, _ []string) {
 	urlGroup := apiGroup.Group("/url", authMiddleware, checkUserExists)
 	urlGroup.POST("/", url.Create)
 	urlGroup.GET("/", url.List)
+	urlGroup.PUT("/:"+constrains.IdParamName+"/", url.Update)
 	urlGroup.DELETE("/:"+constrains.IdParamName+"/", url.Delete)
 
 	entityGroup := apiGroup.Group("/entity", authMiddleware, checkUserExists, checkUserAdmin)

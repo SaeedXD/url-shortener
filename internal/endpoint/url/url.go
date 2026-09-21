@@ -96,6 +96,33 @@ func Create(c echo.Context) error {
 	})
 }
 
+func Update(c echo.Context) error {
+	user := c.Get(constrains.UserInfoContextVar).(databasemodels.User)
+
+	id, err := strconv.ParseInt(c.Param(constrains.IdParamName), 10, 0)
+	if err != nil {
+		return err
+	}
+	r := new(requestschemas.UpdateURL)
+	if err := c.Bind(r); err != nil {
+		return err
+	}
+	if err := c.Validate(r); err != nil {
+		return err
+	}
+	if err := controller.ValidateUpdateUrl(r); err != nil {
+		return err
+	}
+
+	err = redirectcache.Default.Mutate(c.Request().Context(), func() error {
+		return controller.UpdateUrl(id, r, user)
+	})
+	if err != nil {
+		return cacheMutationError(err)
+	}
+	return c.NoContent(http.StatusNoContent)
+}
+
 func Delete(c echo.Context) error {
 	user := c.Get(constrains.UserInfoContextVar).(databasemodels.User)
 

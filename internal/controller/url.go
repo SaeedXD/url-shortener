@@ -45,6 +45,22 @@ func ValidateCreateUrl(r *requestschemas.CreateURL) error {
 	return nil
 }
 
+func ValidateUpdateUrl(r *requestschemas.UpdateURL) error {
+	if configuration.CurrentConfig.RejectRedirectUrls {
+		parsed, _ := url.Parse(r.FullUrl) // URL Already validated
+		if !(slices.Contains(configuration.CurrentConfig.WhiteListHosts, parsed.Host)) {
+			isRedirect, err := shortcode.IsRedirectingURL(r.FullUrl)
+			if err != nil {
+				return echo.NewHTTPError(http.StatusInternalServerError, "Error while checking URL redirection: "+err.Error())
+			}
+			if isRedirect {
+				return echo.NewHTTPError(http.StatusBadRequest, "Shortened URLs are not allowed.")
+			}
+		}
+	}
+	return nil
+}
+
 func CreateUrl(r *requestschemas.CreateURL, creator databasemodels.User) (int64, string, error) {
 	entity := databasemodels.Entity{}
 	if r.Entity != 0 {
@@ -71,6 +87,25 @@ func CreateUrl(r *requestschemas.CreateURL, creator databasemodels.User) (int64,
 		return 0, "", err
 	}
 	return u.Id, u.ShortCode, nil
+}
+
+func UpdateUrl(id int64, r *requestschemas.UpdateURL, user databasemodels.User) error {
+	condition := databasemodels.Url{Id: id}
+	if !user.Admin {
+		condition.Creator = user
+	}
+
+	affected, err := database.Engine.Table(new(databasemodels.Url)).NoVersionCheck().Incr("version").Cols("full_url").Update(
+		&databasemodels.Url{FullUrl: r.FullUrl},
+		&condition,
+	)
+	if err != nil {
+		return err
+	}
+	if affected == 0 {
+		return echo.ErrNotFound
+	}
+	return nil
 }
 
 func DeleteUrl(id int64, user databasemodels.User) error {
