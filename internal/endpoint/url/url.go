@@ -139,6 +139,24 @@ func Delete(c echo.Context) error {
 	return c.NoContent(http.StatusNoContent)
 }
 
+func Get(c echo.Context) error {
+	user := c.Get(constrains.UserInfoContextVar).(databasemodels.User)
+
+	id, err := strconv.ParseInt(c.Param(constrains.IdParamName), 10, 0)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+	}
+	result, err := controller.GetUrl(id, user)
+	if err != nil {
+		return err
+	}
+	result.ShortUrl, err = url.JoinPath(c.Scheme()+"://"+c.Request().Host, configuration.CurrentConfig.BaseURI, "/"+result.ShortCode)
+	if err != nil {
+		return err
+	}
+	return c.JSON(http.StatusOK, result)
+}
+
 func RemoveUnusedUrls(c echo.Context) error {
 	user := c.Get(constrains.UserInfoContextVar).(databasemodels.User)
 	cutoffStr := c.QueryParam(constrains.CutoffQueryParamName) // Example: 2006-01-02T15:04:05Z07:00

@@ -126,6 +126,21 @@ func DeleteUrl(id int64, user databasemodels.User) error {
 	return nil
 }
 
+func GetUrl(id int64, user databasemodels.User) (*responseschemas.Url, error) {
+	u := databasemodels.Url{Id: id}
+	if !user.Admin {
+		u.Creator = user
+	}
+	has, err := database.Engine.Get(&u)
+	if err != nil {
+		return nil, err
+	}
+	if !has {
+		return nil, echo.ErrNotFound
+	}
+	return &responseschemas.Url{Url: u}, nil
+}
+
 func ListUrls(user databasemodels.User, limit, offset int) (*responseschemas.ListUrls, error) {
 	var urls []databasemodels.Url
 	prepared := new(responseschemas.ListUrls)
