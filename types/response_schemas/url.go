@@ -8,6 +8,7 @@ type UrlMetaData struct {
 }
 
 type Create struct {
+	Id        int64
 	ShortUrl  string
 	ShortCode string
 }

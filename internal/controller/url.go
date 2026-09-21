@@ -45,16 +45,16 @@ func ValidateCreateUrl(r *requestschemas.CreateURL) error {
 	return nil
 }
 
-func CreateUrl(r *requestschemas.CreateURL, creator databasemodels.User) (string, error) {
+func CreateUrl(r *requestschemas.CreateURL, creator databasemodels.User) (int64, string, error) {
 	entity := databasemodels.Entity{}
 	if r.Entity != 0 {
 		entity.Id = r.Entity
 		has, err := database.Engine.Get(&entity)
 		if err != nil {
-			return "", err
+			return 0, "", err
 		}
 		if !has {
-			return "", echo.NewHTTPError(http.StatusBadRequest, "Entity does not exist.")
+			return 0, "", echo.NewHTTPError(http.StatusBadRequest, "Entity does not exist.")
 		}
 	}
 	u := databasemodels.Url{
@@ -68,9 +68,9 @@ func CreateUrl(r *requestschemas.CreateURL, creator databasemodels.User) (string
 		u.ShortCode = shortcode.Generate(u.Id, time.Now())
 	}
 	if _, err := database.Engine.Insert(&u); err != nil {
-		return "", err
+		return 0, "", err
 	}
-	return u.ShortCode, nil
+	return u.Id, u.ShortCode, nil
 }
 
 func DeleteUrl(id int64, user databasemodels.User) error {

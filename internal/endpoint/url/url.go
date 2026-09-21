@@ -75,10 +75,11 @@ func Create(c echo.Context) error {
 		return err
 	}
 
+	var id int64
 	var shortCode string
 	err := redirectcache.Default.Mutate(c.Request().Context(), func() error {
 		var createErr error
-		shortCode, createErr = controller.CreateUrl(r, user)
+		id, shortCode, createErr = controller.CreateUrl(r, user)
 		return createErr
 	})
 	if err != nil {
@@ -89,6 +90,7 @@ func Create(c echo.Context) error {
 		return err
 	}
 	return c.JSON(http.StatusCreated, responseschemas.Create{
+		Id:        id,
 		ShortCode: shortCode,
 		ShortUrl:  shortURL,
 	})
