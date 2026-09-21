@@ -101,7 +101,7 @@ func Update(c echo.Context) error {
 
 	id, err := strconv.ParseInt(c.Param(constrains.IdParamName), 10, 0)
 	if err != nil {
-		return err
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 	r := new(requestschemas.UpdateURL)
 	if err := c.Bind(r); err != nil {
