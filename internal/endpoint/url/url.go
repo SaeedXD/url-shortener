@@ -75,24 +75,22 @@ func Create(c echo.Context) error {
 		return err
 	}
 
-	var id int64
-	var shortCode string
+	var createdURL databasemodels.Url
 	err := redirectcache.Default.Mutate(c.Request().Context(), func() error {
 		var createErr error
-		id, shortCode, createErr = controller.CreateUrl(r, user)
+		createdURL, createErr = controller.CreateUrl(r, user)
 		return createErr
 	})
 	if err != nil {
 		return cacheMutationError(err)
 	}
-	shortURL, err := url.JoinPath(c.Scheme()+"://"+c.Request().Host, configuration.CurrentConfig.BaseURI, "/"+shortCode)
+	shortURL, err := url.JoinPath(c.Scheme()+"://"+c.Request().Host, configuration.CurrentConfig.BaseURI, "/"+createdURL.ShortCode)
 	if err != nil {
 		return err
 	}
-	return c.JSON(http.StatusCreated, responseschemas.Create{
-		Id:        id,
-		ShortCode: shortCode,
-		ShortUrl:  shortURL,
+	return c.JSON(http.StatusCreated, responseschemas.Url{
+		Url:      createdURL,
+		ShortUrl: shortURL,
 	})
 }
 

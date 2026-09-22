@@ -7,12 +7,6 @@ type UrlMetaData struct {
 	TotalVisit int64
 }
 
-type Create struct {
-	Id        int64
-	ShortUrl  string
-	ShortCode string
-}
-
 type Url struct {
 	databasemodels.Url `json:",inline"`
 	ShortUrl           string
