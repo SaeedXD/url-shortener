@@ -38,7 +38,7 @@ func TestCreateReturnsPersistedURLID(t *testing.T) {
 		t.Fatalf("status = %d, want %d", recorder.Code, http.StatusCreated)
 	}
 
-	var response responseschemas.Create
+	var response responseschemas.Url
 	if err := json.Unmarshal(recorder.Body.Bytes(), &response); err != nil {
 		t.Fatal(err)
 	}
@@ -56,6 +56,9 @@ func TestCreateReturnsPersistedURLID(t *testing.T) {
 	}
 	if stored.ShortCode != response.ShortCode || stored.FullUrl != "https://example.com/original" {
 		t.Fatalf("create response does not identify the persisted URL: %+v", stored)
+	}
+	if response.FullUrl != stored.FullUrl || response.Creator.Id != owner.Id {
+		t.Fatalf("create response does not contain the complete URL: %+v", response)
 	}
 }
 
